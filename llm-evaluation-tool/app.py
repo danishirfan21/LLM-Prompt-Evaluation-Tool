@@ -8,6 +8,11 @@ from openai import OpenAI
 from anthropic import Anthropic
 import google.generativeai as genai
 from dotenv import load_dotenv
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -45,41 +50,76 @@ def get_google_sheet():
         
         return sheet
     except Exception as e:
-        print(f"Error setting up Google Sheets: {e}")
+        logger.error(f"Error setting up Google Sheets: {e}")
         return None
 
 def get_gpt4_response(prompt):
-    """Get response from GPT-4"""
+    """Get response from GPT-4 with better error handling"""
     try:
         response = openai_client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=500
+            max_tokens=500,
+            timeout=30
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"Error: {str(e)}"
+        error_msg = str(e)
+        logger.error(f"GPT-4 Error: {error_msg}")
+        
+        # Return user-friendly error
+        if "insufficient_quota" in error_msg or "billing" in error_msg.lower():
+            return "Error: GPT-4 unavailable - API credits required. Please add billing information to your OpenAI account."
+        elif "invalid_api_key" in error_msg:
+            return "Error: GPT-4 authentication failed - Invalid API key"
+        elif "rate_limit" in error_msg:
+            return "Error: GPT-4 rate limit exceeded - Please try again in a moment"
+        else:
+            return f"Error: GPT-4 service error - {error_msg[:100]}"
 
 def get_claude_response(prompt):
-    """Get response from Claude"""
+    """Get response from Claude with better error handling"""
     try:
         response = anthropic_client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=500,
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            timeout=30
         )
         return response.content[0].text
     except Exception as e:
-        return f"Error: {str(e)}"
+        error_msg = str(e)
+        logger.error(f"Claude Error: {error_msg}")
+        
+        # Return user-friendly error
+        if "credit balance" in error_msg.lower() or "billing" in error_msg.lower():
+            return "Error: Claude unavailable - API credits required. Please add credits to your Anthropic account."
+        elif "authentication" in error_msg.lower() or "api_key" in error_msg.lower():
+            return "Error: Claude authentication failed - Check your API key"
+        elif "rate_limit" in error_msg:
+            return "Error: Claude rate limit exceeded - Please try again later"
+        else:
+            return f"Error: Claude service error - {error_msg[:100]}"
 
 def get_gemini_response(prompt):
-    """Get response from Gemini"""
+    """Get response from Gemini with better error handling"""
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')  # Updated model name
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"Error: {str(e)}"
+        error_msg = str(e)
+        logger.error(f"Gemini Error: {error_msg}")
+        
+        # Return user-friendly error
+        if "404" in error_msg or "not found" in error_msg.lower():
+            return "Error: Gemini model not available - Try 'gemini-1.5-flash' or check your region"
+        elif "api_key" in error_msg.lower():
+            return "Error: Gemini authentication failed - Check your Google API key"
+        elif "quota" in error_msg.lower() or "rate" in error_msg.lower():
+            return "Error: Gemini quota exceeded - You may have hit the free tier limit"
+        else:
+            return f"Error: Gemini service error - {error_msg[:100]}"
 
 @app.route('/')
 def index():
@@ -95,12 +135,19 @@ def evaluate_prompt():
     if not prompt:
         return jsonify({'error': 'No prompt provided'}), 400
     
-    # Get responses from all models
+    logger.info(f"Evaluating prompt: {prompt[:50]}...")
+    
+    # Get responses from all models (they handle their own errors)
     responses = {
         'gpt4': get_gpt4_response(prompt),
         'claude': get_claude_response(prompt),
         'gemini': get_gemini_response(prompt)
     }
+    
+    # Log which models succeeded/failed
+    for model, response in responses.items():
+        status = "❌ Error" if response.startswith("Error:") else "✅ Success"
+        logger.info(f"{model}: {status}")
     
     return jsonify({'responses': responses})
 
@@ -112,38 +159,86 @@ def submit_ratings():
     responses = data.get('responses')
     ratings = data.get('ratings')
     
+    if not all([prompt, responses, ratings]):
+        return jsonify({'error': 'Missing required data'}), 400
+    
     sheet = get_google_sheet()
     if not sheet:
         return jsonify({'error': 'Could not access Google Sheets'}), 500
     
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    # Add each model's data as a row
+    # Only save ratings for models that succeeded (not errors)
+    model_names = {
+        'gpt4': 'GPT-4',
+        'claude': 'Claude',
+        'gemini': 'Gemini'
+    }
+    
+    saved_count = 0
+    
     for model in ['gpt4', 'claude', 'gemini']:
-        model_name = {
-            'gpt4': 'GPT-4',
-            'claude': 'Claude',
-            'gemini': 'Gemini'
-        }[model]
+        # Skip if this model had an error or wasn't rated
+        if model not in ratings:
+            logger.info(f"Skipping {model} - not rated")
+            continue
+            
+        response_text = responses.get(model, '')
+        if response_text.startswith("Error:"):
+            logger.info(f"Skipping {model} - had error response")
+            continue
         
-        rating = ratings.get(model, {})
+        rating = ratings[model]
         row = [
             timestamp,
             prompt,
-            model_name,
-            responses.get(model, ''),
+            model_names[model],
+            response_text,
             rating.get('accuracy', ''),
             rating.get('clarity', ''),
             rating.get('creativity', ''),
             rating.get('hallucination', ''),
             rating.get('final', '')
         ]
-        sheet.append_row(row)
+        
+        try:
+            sheet.append_row(row)
+            saved_count += 1
+            logger.info(f"Saved rating for {model}")
+        except Exception as e:
+            logger.error(f"Error saving {model} rating: {e}")
     
     return jsonify({
         'success': True,
+        'saved_count': saved_count,
         'sheet_url': sheet.spreadsheet.url
     })
 
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    status = {
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'apis': {}
+    }
+    
+    # Check which API keys are configured
+    status['apis']['openai'] = 'configured' if os.getenv('OPENAI_API_KEY') else 'missing'
+    status['apis']['anthropic'] = 'configured' if os.getenv('ANTHROPIC_API_KEY') else 'missing'
+    status['apis']['google'] = 'configured' if os.getenv('GOOGLE_API_KEY') else 'missing'
+    
+    return jsonify(status)
+
 if __name__ == '__main__':
+    # Check for required files on startup
+    if not os.path.exists('.env'):
+        logger.warning("⚠️  .env file not found - API keys may be missing")
+    
+    if not os.path.exists('credentials.json'):
+        logger.warning("⚠️  credentials.json not found - Google Sheets will not work")
+    
+    logger.info("🚀 Starting LLM Evaluation Tool...")
+    logger.info("📝 Access at: http://localhost:5000")
+    
     app.run(debug=True, port=5000)

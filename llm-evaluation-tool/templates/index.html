@@ -10,6 +10,8 @@
             --primary-dark: #764ba2;
             --success: #10b981;
             --success-dark: #059669;
+            --error: #ef4444;
+            --warning: #f59e0b;
             --gpt-color: #10a37f;
             --claude-color: #d97706;
             --gemini-color: #4285f4;
@@ -47,32 +49,38 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         .header {
-            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
             color: white;
-            margin-bottom: 40px;
-            position: relative;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            font-size: 1.8rem;
         }
 
         .header p {
-            font-size: 1.1rem;
             opacity: 0.9;
+            font-size: 0.95rem;
         }
 
         .theme-toggle {
-            position: absolute;
-            top: 0;
-            right: 0;
             background: rgba(255,255,255,0.2);
             border: none;
             padding: 10px 20px;
@@ -120,6 +128,7 @@
             transition: border-color 0.3s;
             background: var(--input-bg);
             color: var(--text-primary);
+            line-height: 1.6;
         }
 
         .prompt-input:focus {
@@ -139,7 +148,7 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .submit-btn:hover {
+        .submit-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
         }
@@ -147,7 +156,6 @@
         .submit-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
         }
 
         .loading {
@@ -184,11 +192,43 @@
             display: block;
         }
 
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .view-btn {
+            padding: 10px 20px;
+            border: 2px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .view-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .responses-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        .responses-grid.comparison-view {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
         .response-card {
-            background: rgba(0,0,0,0.05);
+            background: rgba(0,0,0,0.03);
             border-radius: 15px;
             padding: 25px;
-            margin-bottom: 25px;
             border-left: 5px solid var(--primary);
             transition: transform 0.2s;
         }
@@ -198,7 +238,7 @@
         }
 
         .response-card:hover {
-            transform: translateX(5px);
+            transform: translateY(-3px);
         }
 
         .response-header {
@@ -230,16 +270,40 @@
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
-            line-height: 1.6;
+            line-height: 1.8;
             color: var(--text-secondary);
             border: 1px solid var(--border-color);
         }
 
+        .response-text.error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        .error-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            color: var(--error);
+            margin-bottom: 20px;
+        }
+
+        .error-details {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
         .rating-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -277,6 +341,23 @@
             border-color: var(--primary);
         }
 
+        /* Star rating */
+        .star-rating {
+            display: flex;
+            gap: 5px;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .star {
+            color: #ddd;
+            transition: color 0.2s;
+        }
+
+        .star.filled {
+            color: #fbbf24;
+        }
+
         .save-rating-btn {
             background: var(--success);
             color: white;
@@ -289,6 +370,10 @@
         }
 
         .save-rating-btn:hover {
+            background: var(--success-dark);
+        }
+
+        .save-rating-btn.saved {
             background: var(--success-dark);
         }
 
@@ -319,45 +404,31 @@
             }
         }
 
-        .stats-summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .stat-card {
-            background: var(--input-bg);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
+        .rating-helper {
+            font-size: 0.8rem;
             color: var(--text-secondary);
             margin-top: 5px;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 1200px) {
+            .responses-grid.comparison-view {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
             .header h1 {
-                font-size: 1.8rem;
+                font-size: 1.5rem;
             }
 
             .rating-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .theme-toggle {
-                position: static;
-                margin-bottom: 20px;
             }
         }
     </style>
@@ -365,9 +436,13 @@
 <body>
     <div class="container">
         <div class="header">
+            <div class="header-left">
+                <div>
+                    <h1>🤖 LLM Prompt Evaluation Tool</h1>
+                    <p>Test your prompts across GPT-4, Claude, and Gemini</p>
+                </div>
+            </div>
             <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
-            <h1>🤖 LLM Prompt Evaluation Tool</h1>
-            <p>Test your prompts across GPT-4, Claude, and Gemini</p>
         </div>
 
         <div class="card">
@@ -385,114 +460,141 @@
 
         <div class="responses-container" id="responsesContainer">
             <div class="card">
-                <h2 style="margin-bottom: 25px; color: var(--text-primary);">📊 Rate the Responses</h2>
+                <h2 style="margin-bottom: 15px; color: var(--text-primary);">📊 Rate the Responses</h2>
                 
-                <!-- GPT-4 Response -->
-                <div class="response-card" id="gpt4Card">
-                    <div class="response-header">
-                        <span class="model-name">GPT-4</span>
-                        <span class="model-badge badge-gpt4">OpenAI</span>
-                    </div>
-                    <div class="response-text" id="gpt4Response">Loading...</div>
-                    <div class="rating-grid">
-                        <div class="rating-item">
-                            <label>Accuracy (1-10)</label>
-                            <input type="number" min="1" max="10" id="gpt4Accuracy">
-                        </div>
-                        <div class="rating-item">
-                            <label>Clarity (1-10)</label>
-                            <input type="number" min="1" max="10" id="gpt4Clarity">
-                        </div>
-                        <div class="rating-item">
-                            <label>Creativity (1-10)</label>
-                            <input type="number" min="1" max="10" id="gpt4Creativity">
-                        </div>
-                        <div class="rating-item">
-                            <label>Hallucination</label>
-                            <select id="gpt4Hallucination">
-                                <option value="no">No</option>
-                                <option value="yes">Yes</option>
-                            </select>
-                        </div>
-                        <div class="rating-item">
-                            <label>Final Score (1-10)</label>
-                            <input type="number" min="1" max="10" id="gpt4Final">
-                        </div>
-                    </div>
-                    <button class="save-rating-btn" onclick="saveRating('gpt4')">💾 Save Rating</button>
+                <div class="view-toggle">
+                    <button class="view-btn active" onclick="setView('stacked')">📋 Stacked View</button>
+                    <button class="view-btn" onclick="setView('comparison')">⚖️ Comparison View</button>
                 </div>
 
-                <!-- Claude Response -->
-                <div class="response-card" id="claudeCard">
-                    <div class="response-header">
-                        <span class="model-name">Claude</span>
-                        <span class="model-badge badge-claude">Anthropic</span>
+                <div class="responses-grid" id="responsesGrid">
+                    <!-- GPT-4 Response -->
+                    <div class="response-card" id="gpt4Card">
+                        <div class="response-header">
+                            <span class="model-name">GPT-4</span>
+                            <span class="model-badge badge-gpt4">OpenAI</span>
+                        </div>
+                        <div id="gpt4Error" style="display: none;"></div>
+                        <div class="response-text" id="gpt4Response">Loading...</div>
+                        <div class="rating-grid">
+                            <div class="rating-item">
+                                <label>Accuracy (1-10)</label>
+                                <input type="number" min="1" max="10" id="gpt4Accuracy">
+                                <div class="rating-helper">How factually correct?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Clarity (1-10)</label>
+                                <input type="number" min="1" max="10" id="gpt4Clarity">
+                                <div class="rating-helper">How easy to understand?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Creativity (1-10)</label>
+                                <input type="number" min="1" max="10" id="gpt4Creativity">
+                                <div class="rating-helper">How creative or novel?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Hallucination</label>
+                                <select id="gpt4Hallucination">
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                </select>
+                                <div class="rating-helper">Any made-up facts?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Final Score (1-10)</label>
+                                <input type="number" min="1" max="10" id="gpt4Final">
+                                <div class="rating-helper">Overall quality</div>
+                            </div>
+                        </div>
+                        <button class="save-rating-btn" onclick="saveRating('gpt4')">💾 Save Rating</button>
                     </div>
-                    <div class="response-text" id="claudeResponse">Loading...</div>
-                    <div class="rating-grid">
-                        <div class="rating-item">
-                            <label>Accuracy (1-10)</label>
-                            <input type="number" min="1" max="10" id="claudeAccuracy">
+
+                    <!-- Claude Response -->
+                    <div class="response-card" id="claudeCard">
+                        <div class="response-header">
+                            <span class="model-name">Claude</span>
+                            <span class="model-badge badge-claude">Anthropic</span>
                         </div>
-                        <div class="rating-item">
-                            <label>Clarity (1-10)</label>
-                            <input type="number" min="1" max="10" id="claudeClarity">
+                        <div id="claudeError" style="display: none;"></div>
+                        <div class="response-text" id="claudeResponse">Loading...</div>
+                        <div class="rating-grid">
+                            <div class="rating-item">
+                                <label>Accuracy (1-10)</label>
+                                <input type="number" min="1" max="10" id="claudeAccuracy">
+                                <div class="rating-helper">How factually correct?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Clarity (1-10)</label>
+                                <input type="number" min="1" max="10" id="claudeClarity">
+                                <div class="rating-helper">How easy to understand?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Creativity (1-10)</label>
+                                <input type="number" min="1" max="10" id="claudeCreativity">
+                                <div class="rating-helper">How creative or novel?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Hallucination</label>
+                                <select id="claudeHallucination">
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                </select>
+                                <div class="rating-helper">Any made-up facts?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Final Score (1-10)</label>
+                                <input type="number" min="1" max="10" id="claudeFinal">
+                                <div class="rating-helper">Overall quality</div>
+                            </div>
                         </div>
-                        <div class="rating-item">
-                            <label>Creativity (1-10)</label>
-                            <input type="number" min="1" max="10" id="claudeCreativity">
-                        </div>
-                        <div class="rating-item">
-                            <label>Hallucination</label>
-                            <select id="claudeHallucination">
-                                <option value="no">No</option>
-                                <option value="yes">Yes</option>
-                            </select>
-                        </div>
-                        <div class="rating-item">
-                            <label>Final Score (1-10)</label>
-                            <input type="number" min="1" max="10" id="claudeFinal">
-                        </div>
+                        <button class="save-rating-btn" onclick="saveRating('claude')">💾 Save Rating</button>
                     </div>
-                    <button class="save-rating-btn" onclick="saveRating('claude')">💾 Save Rating</button>
+
+                    <!-- Gemini Response -->
+                    <div class="response-card" id="geminiCard">
+                        <div class="response-header">
+                            <span class="model-name">Gemini</span>
+                            <span class="model-badge badge-gemini">Google</span>
+                        </div>
+                        <div id="geminiError" style="display: none;"></div>
+                        <div class="response-text" id="geminiResponse">Loading...</div>
+                        <div class="rating-grid">
+                            <div class="rating-item">
+                                <label>Accuracy (1-10)</label>
+                                <input type="number" min="1" max="10" id="geminiAccuracy">
+                                <div class="rating-helper">How factually correct?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Clarity (1-10)</label>
+                                <input type="number" min="1" max="10" id="geminiClarity">
+                                <div class="rating-helper">How easy to understand?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Creativity (1-10)</label>
+                                <input type="number" min="1" max="10" id="geminiCreativity">
+                                <div class="rating-helper">How creative or novel?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Hallucination</label>
+                                <select id="geminiHallucination">
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                </select>
+                                <div class="rating-helper">Any made-up facts?</div>
+                            </div>
+                            <div class="rating-item">
+                                <label>Final Score (1-10)</label>
+                                <input type="number" min="1" max="10" id="geminiFinal">
+                                <div class="rating-helper">Overall quality</div>
+                            </div>
+                        </div>
+                        <button class="save-rating-btn" onclick="saveRating('gemini')">💾 Save Rating</button>
+                    </div>
                 </div>
 
-                <!-- Gemini Response -->
-                <div class="response-card" id="geminiCard">
-                    <div class="response-header">
-                        <span class="model-name">Gemini</span>
-                        <span class="model-badge badge-gemini">Google</span>
-                    </div>
-                    <div class="response-text" id="geminiResponse">Loading...</div>
-                    <div class="rating-grid">
-                        <div class="rating-item">
-                            <label>Accuracy (1-10)</label>
-                            <input type="number" min="1" max="10" id="geminiAccuracy">
-                        </div>
-                        <div class="rating-item">
-                            <label>Clarity (1-10)</label>
-                            <input type="number" min="1" max="10" id="geminiClarity">
-                        </div>
-                        <div class="rating-item">
-                            <label>Creativity (1-10)</label>
-                            <input type="number" min="1" max="10" id="geminiCreativity">
-                        </div>
-                        <div class="rating-item">
-                            <label>Hallucination</label>
-                            <select id="geminiHallucination">
-                                <option value="no">No</option>
-                                <option value="yes">Yes</option>
-                            </select>
-                        </div>
-                        <div class="rating-item">
-                            <label>Final Score (1-10)</label>
-                            <input type="number" min="1" max="10" id="geminiFinal">
-                        </div>
-                    </div>
-                    <button class="save-rating-btn" onclick="saveRating('gemini')">💾 Save Rating</button>
-                </div>
-
-                <button class="submit-btn" style="margin-top: 20px;" onclick="submitAllRatings()">📤 Submit All Ratings to Google Sheets</button>
+                <button class="submit-btn" style="margin-top: 30px; width: 100%;" onclick="submitAllRatings()">
+                    📤 Submit All Ratings to Google Sheets
+                </button>
                 
                 <div class="success-message" id="successMessage">
                     ✅ Successfully saved to Google Sheets!
@@ -517,6 +619,63 @@
             document.body.classList.add('dark-mode');
         }
 
+        // View toggle
+        function setView(view) {
+            const grid = document.getElementById('responsesGrid');
+            const buttons = document.querySelectorAll('.view-btn');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (view === 'comparison') {
+                grid.classList.add('comparison-view');
+            } else {
+                grid.classList.remove('comparison-view');
+            }
+        }
+
+        function parseErrorMessage(errorText, modelName) {
+            // Extract user-friendly error messages
+            const errorPatterns = {
+                'credit balance is too low': `${modelName} is unavailable - API credits required`,
+                'invalid_request_error': `${modelName} request failed - Check API configuration`,
+                '404': `${modelName} model not found - May not be available in your region`,
+                'not found': `${modelName} service unavailable`,
+                'authentication': `${modelName} authentication failed - Check API key`,
+                'rate_limit': `${modelName} rate limit exceeded - Try again later`
+            };
+
+            for (const [pattern, message] of Object.entries(errorPatterns)) {
+                if (errorText.toLowerCase().includes(pattern)) {
+                    return message;
+                }
+            }
+
+            return `${modelName} encountered an error`;
+        }
+
+        function displayError(model, errorText) {
+            const errorDiv = document.getElementById(`${model}Error`);
+            const responseDiv = document.getElementById(`${model}Response`);
+            
+            const friendlyMessage = parseErrorMessage(errorText, model.toUpperCase());
+            
+            errorDiv.innerHTML = `
+                <div class="error-message">
+                    <span>⚠️</span>
+                    <div>
+                        <div>${friendlyMessage}</div>
+                        <details class="error-details">
+                            <summary style="cursor: pointer;">View technical details</summary>
+                            <pre style="margin-top: 10px; font-size: 0.75rem;">${errorText}</pre>
+                        </details>
+                    </div>
+                </div>
+            `;
+            errorDiv.style.display = 'block';
+            responseDiv.style.display = 'none';
+        }
+
         async function evaluatePrompt() {
             const prompt = document.getElementById('prompt').value.trim();
             if (!prompt) {
@@ -526,15 +685,18 @@
 
             currentPrompt = prompt;
             
+            // Reset previous errors
+            ['gpt4', 'claude', 'gemini'].forEach(model => {
+                document.getElementById(`${model}Error`).style.display = 'none';
+                document.getElementById(`${model}Response`).style.display = 'block';
+            });
+            
             // Show loading
             document.getElementById('loading').classList.add('active');
             document.querySelector('.submit-btn').disabled = true;
-            
-            // Hide previous responses
             document.getElementById('responsesContainer').classList.remove('active');
             
             try {
-                // Call backend API
                 const response = await fetch('/api/evaluate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -544,10 +706,15 @@
                 const data = await response.json();
                 responses = data.responses;
                 
-                // Display responses
-                document.getElementById('gpt4Response').textContent = responses.gpt4 || 'Error getting response';
-                document.getElementById('claudeResponse').textContent = responses.claude || 'Error getting response';
-                document.getElementById('geminiResponse').textContent = responses.gemini || 'Error getting response';
+                // Display responses or errors
+                ['gpt4', 'claude', 'gemini'].forEach(model => {
+                    const text = responses[model] || 'No response';
+                    if (text.toLowerCase().includes('error')) {
+                        displayError(model, text);
+                    } else {
+                        document.getElementById(`${model}Response`).textContent = text;
+                    }
+                });
                 
                 // Show response cards
                 document.getElementById('responsesContainer').classList.add('active');
@@ -557,7 +724,6 @@
             } catch (error) {
                 alert('Error: ' + error.message);
             } finally {
-                // Hide loading
                 document.getElementById('loading').classList.remove('active');
                 document.querySelector('.submit-btn').disabled = false;
             }
@@ -572,20 +738,30 @@
                 final: document.getElementById(`${model}Final`).value
             };
             
+            // Save to localStorage for safety
+            localStorage.setItem(`rating_${model}`, JSON.stringify(ratings[model]));
+            
             // Visual feedback
             const btn = event.target;
-            const originalText = btn.textContent;
             btn.textContent = '✅ Saved';
-            btn.style.background = '#059669';
+            btn.classList.add('saved');
             setTimeout(() => {
-                btn.textContent = originalText;
-                btn.style.background = '#10b981';
+                btn.textContent = '💾 Save Rating';
+                btn.classList.remove('saved');
             }, 1500);
         }
 
         async function submitAllRatings() {
-            if (Object.keys(ratings).length < 3) {
-                alert('Please rate all three models before submitting');
+            // Check if all models are rated
+            const successfulModels = Object.keys(responses).filter(model => 
+                !responses[model].toLowerCase().includes('error')
+            );
+            
+            const ratedModels = Object.keys(ratings);
+            const missingRatings = successfulModels.filter(model => !ratedModels.includes(model));
+            
+            if (missingRatings.length > 0) {
+                alert(`Please rate all successful responses before submitting (missing: ${missingRatings.join(', ')})`);
                 return;
             }
 
@@ -604,6 +780,12 @@
                 
                 if (data.success) {
                     document.getElementById('successMessage').classList.add('active');
+                    
+                    // Clear localStorage
+                    localStorage.removeItem('rating_gpt4');
+                    localStorage.removeItem('rating_claude');
+                    localStorage.removeItem('rating_gemini');
+                    
                     setTimeout(() => {
                         document.getElementById('successMessage').classList.remove('active');
                     }, 3000);
@@ -613,11 +795,25 @@
             }
         }
 
-        // Allow Enter key to submit prompt
+        // Keyboard shortcut
         document.getElementById('prompt').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.ctrlKey) {
                 evaluatePrompt();
             }
+        });
+
+        // Load saved ratings from localStorage on page load
+        window.addEventListener('load', () => {
+            ['gpt4', 'claude', 'gemini'].forEach(model => {
+                const saved = localStorage.getItem(`rating_${model}`);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    Object.keys(data).forEach(key => {
+                        const element = document.getElementById(`${model}${key.charAt(0).toUpperCase() + key.slice(1)}`);
+                        if (element) element.value = data[key];
+                    });
+                }
+            });
         });
     </script>
 </body>
